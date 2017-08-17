@@ -19,33 +19,50 @@
             <!--app:popupTheme="@style/AppTheme.PopupOverlay" />-->
 
     <!--</android.support.design.widget.AppBarLayout>-->
-    <include layout="@layout/content_main" />
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:orientation="horizontal">
 
         <Button
-            android:id="@+id/fab3"
+            android:id="@+id/btn_select"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="选择" />
+
+
+        <Button
+            android:id="@+id/btn_scaled"
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="wrap_content"
             android:text="缩放" />
 
         <Button
-            android:id="@+id/fab2"
+            android:id="@+id/btn_trans"
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="wrap_content"
             android:text="旋转" />
 
         <Button
-            android:id="@+id/fab"
+            android:id="@+id/btn_mark"
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:text="选择" />
+            android:text="水印" />
+
+        <Button
+            android:id="@+id/btn_info"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="信息" />
 
     </LinearLayout>
+
+    <include layout="@layout/content_main" />
+
 </LinearLayout>

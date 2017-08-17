@@ -15,8 +15,9 @@ import android.widget.Toast;
 
 import com.cxz.images.compress.Luban;
 import com.cxz.images.compress.OnCompressListener;
-import com.cxz.images.utils.BitmapWaterMarkHelper;
-import com.cxz.images.utils.ImageUtil;
+import com.cxz.images.utils.BitmapWaterMarkUtil;
+import com.cxz.images.utils.ImageInfoUtil;
+import com.cxz.images.utils.ImagesUtil;
 import com.cxz.images.zoom.ImagePreviewActivity;
 
 import java.io.File;
@@ -27,17 +28,16 @@ import java.util.concurrent.Executors;
 import me.iwf.photopicker.PhotoPicker;
 
 public class MainActivity extends AppCompatActivity {
-    private static final String TAG = "Luban";
 
     private TextView fileSize;
     private TextView imageSize;
     private TextView thumbFileSize;
     private TextView thumbImageSize;
-    private ImageView image;
-    private ImageView image2;
+    private ImageView imageView;
+    private ImageView imageView2;
 
-    private String path;
-    private String path2;
+    private String pathLuBan;
+    private String pathPress;
     private String srcPath;
 
     //声明一个线程池
@@ -47,76 +47,79 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        //Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        //setSupportActionBar(toolbar);
 
         fileSize = (TextView) findViewById(R.id.file_size);
         imageSize = (TextView) findViewById(R.id.image_size);
         thumbFileSize = (TextView) findViewById(R.id.thumb_file_size);
         thumbImageSize = (TextView) findViewById(R.id.thumb_image_size);
-        image = (ImageView) findViewById(R.id.image);
-        image2 = (ImageView) findViewById(R.id.image2);
+        imageView = (ImageView) findViewById(R.id.imageView);
+        imageView2 = (ImageView) findViewById(R.id.imageView2);
 
-        Button fab = (Button) findViewById(R.id.fab);
-        Button fab2 = (Button) findViewById(R.id.fab2);
-        Button fab3 = (Button) findViewById(R.id.fab3);
+        Button btn_select = (Button) findViewById(R.id.btn_select);
+        Button btn_trans = (Button) findViewById(R.id.btn_trans);
+        Button btn_scaled = (Button) findViewById(R.id.btn_scaled);
+        Button btn_mark = (Button) findViewById(R.id.btn_mark);
+        Button btn_info = (Button) findViewById(R.id.btn_info);
 
-        fab.setOnClickListener(new View.OnClickListener() {
+        btn_select.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 PhotoPicker.builder()
-                        .setPhotoCount(5)
+                        .setPhotoCount(1)
                         .setShowCamera(true)
                         .setShowGif(true)
                         .setPreviewEnabled(false)
                         .start(MainActivity.this, PhotoPicker.REQUEST_CODE);
             }
         });
-        fab2.setOnClickListener(new View.OnClickListener() {
+        btn_trans.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 transformed(srcPath);
             }
         });
 
-        fab3.setOnClickListener(new View.OnClickListener() {
+        btn_scaled.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
                 scaled(srcPath);
-
-                // TODO 添加文字、图片水印测试代码
-                String destPath = Environment.getExternalStorageDirectory() + "/444.jpg";
-                BitmapWaterMarkHelper.setDrawTextFont("",true,true,true);
-                Bitmap bmp = BitmapWaterMarkHelper.drawTextMark(srcPath,"我是水印",100,100,200,200,"#ff0000",50,destPath);
-//                Bitmap bmp = BitmapWaterMarkHelper.drawImageMark(srcPath,srcPath,200,200,200,200,0.9f,destPath);
-                image.setImageBitmap(bmp);
-
-                // TODO 获取图片信息测试代码
-//                ImageInfoHelper info = new ImageInfoHelper(srcPath);
-//                StringBuilder s = new StringBuilder();
-//                s.append(info.getDateTime()+",");
-//                s.append(info.getOrientation()+",");
-//                info.setUserComment("111111111");
-//                s.append(info.getUserComment()+",");
-//                Log.e("TAG","cxz----------------->"+s);
-
             }
         });
 
-        image.setOnClickListener(new View.OnClickListener() {
+        btn_mark.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                imageMark(srcPath);
+            }
+        });
+
+        btn_info.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // TODO 获取图片信息测试代码
+                ImageInfoUtil info = new ImageInfoUtil(srcPath);
+                StringBuilder s = new StringBuilder();
+                s.append(info.getDateTime() + ",");
+                s.append(info.getOrientation() + ",");
+                info.setUserComment("111111111");
+                s.append(info.getUserComment());
+                Toast.makeText(MainActivity.this, s, Toast.LENGTH_LONG).show();
+            }
+        });
+
+        imageView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(MainActivity.this, ImagePreviewActivity.class);
-                intent.putExtra("path", path);
+                intent.putExtra("path", pathLuBan);
                 startActivity(intent);
             }
         });
-        image2.setOnClickListener(new View.OnClickListener() {
+        imageView2.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(MainActivity.this, ImagePreviewActivity.class);
-                intent.putExtra("path", path2);
+                intent.putExtra("path", pathPress);
                 startActivity(intent);
             }
         });
@@ -135,62 +138,108 @@ public class MainActivity extends AppCompatActivity {
                 imageSize.setText(computeSize(imgFile)[0] + "*" + computeSize(imgFile)[1]);
 
                 srcPath = imgFile.getAbsolutePath();
+                thumbFileSize.setText("");
+                thumbImageSize.setText("");
 
                 mExecutor.execute(new Runnable() {
                     @Override
                     public void run() {
                         compress(imgFile.getAbsolutePath());
 
-//                for (String photo : photos) {
-//                    compressWithLs(new File(photo));
-//                }
+                        compressWithLs(new File(imgFile.getAbsolutePath()));
                     }
                 });
             }
         }
     }
 
-    private void transformed(final String path) {
+    /**
+     * 添加水印
+     *
+     * @param srcPath
+     */
+    private void imageMark(final String srcPath) {
         mExecutor.execute(new Runnable() {
             @Override
             public void run() {
-                final String ss = Environment.getExternalStorageDirectory() + "/222.jpg";
-                ImageUtil.transformed(path, ss);
+                String destPath = Environment.getExternalStorageDirectory() + "/111_text_mark.jpg";
+                BitmapWaterMarkUtil.setDrawTextFont("", true, true, true);
+                final Bitmap bmp = BitmapWaterMarkUtil.drawTextMark(srcPath, "我是水印", 100, 100, 200, 200, "#ff0000", 50, destPath);
+//                String destPath = Environment.getExternalStorageDirectory() + "/111_image_mark.jpg";
+//                Bitmap bmp = BitmapWaterMarkUtil.drawImageMark(srcPath,srcPath,200,200,200,200,0.8f,destPath);
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        image.setImageBitmap(BitmapFactory.decodeFile(ss));
+                        imageView.setImageBitmap(bmp);
                     }
                 });
-            }
-        });
-
-    }
-
-    private void scaled(final String path) {
-        mExecutor.execute(new Runnable() {
-            @Override
-            public void run() {
-                String ss2 = Environment.getExternalStorageDirectory() + "/333.jpg";
-                ImageUtil.scaled(path, ss2, 0.5f);
             }
         });
     }
 
     /**
+     * 图片旋转
+     *
      * @param path
      */
-    private void compress(String path) {
-        final String destPath = Environment.getExternalStorageDirectory() + "/111.jpg";
-        ImageUtil.compress(path, destPath);
-        final File desFile = new File(destPath);
-        runOnUiThread(new Runnable() {
+    private void transformed(final String path) {
+        mExecutor.execute(new Runnable() {
             @Override
             public void run() {
-                image2.setImageBitmap(BitmapFactory.decodeFile(desFile.getAbsolutePath()));
-                thumbFileSize.append(desFile.length() / 1024 + "k");
-                thumbImageSize.append(computeSize(desFile)[0] + "*" + computeSize(desFile)[1]);
-                path2 = desFile.getAbsolutePath();
+                final String destPath = Environment.getExternalStorageDirectory() + "/111_trans.jpg";
+                ImagesUtil.transformed(path, destPath, 90);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        imageView.setImageBitmap(BitmapFactory.decodeFile(destPath));
+                    }
+                });
+            }
+        });
+    }
+
+    /**
+     * 图片缩放
+     *
+     * @param path
+     */
+    private void scaled(final String path) {
+        mExecutor.execute(new Runnable() {
+            @Override
+            public void run() {
+                final String destPath = Environment.getExternalStorageDirectory() + "/111_scaled.jpg";
+                ImagesUtil.scaled(path, destPath, 0.5f);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        imageView.setImageBitmap(BitmapFactory.decodeFile(destPath));
+                    }
+                });
+            }
+        });
+    }
+
+    /**
+     * 图片压缩
+     *
+     * @param path
+     */
+    private void compress(final String path) {
+        mExecutor.execute(new Runnable() {
+            @Override
+            public void run() {
+                final String destPath = Environment.getExternalStorageDirectory() + "/111_compress.jpg";
+                ImagesUtil.compress(path, destPath);
+                final File desFile = new File(destPath);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        imageView.setImageBitmap(BitmapFactory.decodeFile(desFile.getAbsolutePath()));
+                        thumbFileSize.append(desFile.length() / 1024 + "k");
+                        thumbImageSize.append(computeSize(desFile)[0] + "*" + computeSize(desFile)[1]);
+                        pathPress = desFile.getAbsolutePath();
+                    }
+                });
             }
         });
     }
@@ -212,11 +261,11 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onSuccess(File file) {
                         Log.i("path", file.getAbsolutePath());
-                        path = file.getAbsolutePath();
+                        pathLuBan = file.getAbsolutePath();
 
-                        //Glide.with(MainActivity.this).load(file).into(image);
-                        Bitmap b = BitmapFactory.decodeFile(file.getAbsolutePath());
-                        image.setImageBitmap(b);
+                        //Glide.with(MainActivity.this).load(file).into(imageView);
+                        Bitmap bmp = BitmapFactory.decodeFile(file.getAbsolutePath());
+                        imageView2.setImageBitmap(bmp);
 
                         thumbFileSize.append("\nLu:" + file.length() / 1024 + "k");
                         thumbImageSize.append("\nLu:" + computeSize(file)[0] + "*" + computeSize(file)[1]);
