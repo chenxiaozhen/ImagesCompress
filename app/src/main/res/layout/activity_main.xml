@@ -27,6 +27,13 @@
         android:orientation="horizontal">
 
         <Button
+            android:id="@+id/fab3"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="缩放" />
+
+        <Button
             android:id="@+id/fab2"
             android:layout_width="0dp"
             android:layout_weight="1"

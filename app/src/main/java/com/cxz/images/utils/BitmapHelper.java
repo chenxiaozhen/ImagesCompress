@@ -1,7 +1,6 @@
-package com.cxz.images;
+package com.cxz.images.utils;
 
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 
 import java.io.File;
@@ -12,7 +11,7 @@ import java.io.IOException;
  * Created by chenxz on 2017/8/16.
  */
 
-public class ImageUtil {
+public class BitmapHelper {
 
     /**
      * 将bitmap保存到文件
@@ -122,7 +121,7 @@ public class ImageUtil {
         return newBM;
     }
 
-    Bitmap resizeBitmap(int desHeight, int desWidth, Bitmap originBitmap) {
+    public static Bitmap resizeBitmap(int desHeight, int desWidth, Bitmap originBitmap) {
 
         int height = originBitmap.getHeight();
         int width = originBitmap.getWidth();

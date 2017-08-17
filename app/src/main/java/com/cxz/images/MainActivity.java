@@ -3,8 +3,6 @@ package com.cxz.images;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Matrix;
-import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
@@ -17,10 +15,14 @@ import android.widget.Toast;
 
 import com.cxz.images.compress.Luban;
 import com.cxz.images.compress.OnCompressListener;
+import com.cxz.images.utils.BitmapWaterMarkHelper;
+import com.cxz.images.utils.ImageUtil;
 import com.cxz.images.zoom.ImagePreviewActivity;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import me.iwf.photopicker.PhotoPicker;
 
@@ -38,6 +40,9 @@ public class MainActivity extends AppCompatActivity {
     private String path2;
     private String srcPath;
 
+    //声明一个线程池
+    private static ExecutorService mExecutor = Executors.newFixedThreadPool(10);
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -53,8 +58,9 @@ public class MainActivity extends AppCompatActivity {
         image2 = (ImageView) findViewById(R.id.image2);
 
         Button fab = (Button) findViewById(R.id.fab);
-
         Button fab2 = (Button) findViewById(R.id.fab2);
+        Button fab3 = (Button) findViewById(R.id.fab3);
+
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -69,50 +75,51 @@ public class MainActivity extends AppCompatActivity {
         fab2.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-//                Bitmap bitmap = ((BitmapDrawable)image.getDrawable()).getBitmap();
-//                image.setImageBitmap(rotatingImage(bitmap));
                 transformed(srcPath);
+            }
+        });
+
+        fab3.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                scaled(srcPath);
+
+                // TODO 添加文字、图片水印测试代码
+                String destPath = Environment.getExternalStorageDirectory() + "/444.jpg";
+                BitmapWaterMarkHelper.setDrawTextFont("",true,true,true);
+                Bitmap bmp = BitmapWaterMarkHelper.drawTextMark(srcPath,"我是水印",100,100,200,200,"#ff0000",50,destPath);
+//                Bitmap bmp = BitmapWaterMarkHelper.drawImageMark(srcPath,srcPath,200,200,200,200,0.9f,destPath);
+                image.setImageBitmap(bmp);
+
+                // TODO 获取图片信息测试代码
+//                ImageInfoHelper info = new ImageInfoHelper(srcPath);
+//                StringBuilder s = new StringBuilder();
+//                s.append(info.getDateTime()+",");
+//                s.append(info.getOrientation()+",");
+//                info.setUserComment("111111111");
+//                s.append(info.getUserComment()+",");
+//                Log.e("TAG","cxz----------------->"+s);
+
             }
         });
 
         image.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(MainActivity.this,ImagePreviewActivity.class);
-                intent.putExtra("path",path);
+                Intent intent = new Intent(MainActivity.this, ImagePreviewActivity.class);
+                intent.putExtra("path", path);
                 startActivity(intent);
             }
         });
         image2.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(MainActivity.this,ImagePreviewActivity.class);
-                intent.putExtra("path",path2);
+                Intent intent = new Intent(MainActivity.this, ImagePreviewActivity.class);
+                intent.putExtra("path", path2);
                 startActivity(intent);
             }
         });
-    }
-
-    int angle = 90;
-    public Bitmap rotatingImage(Bitmap bitmap) {
-        Matrix matrix = new Matrix();
-//        switch (orientation) {
-//            case ExifInterface.ORIENTATION_ROTATE_90:
-//                angle = 90;
-//                break;
-//            case ExifInterface.ORIENTATION_ROTATE_180:
-//                angle = 180;
-//                break;
-//            case ExifInterface.ORIENTATION_ROTATE_270:
-//                angle = 270;
-//                break;
-//        }
-        matrix.setRotate(angle, bitmap.getWidth() / 2, bitmap.getHeight() / 2);
-        Bitmap bmp = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
-        if (bitmap != null){
-            bitmap.recycle();
-        }
-        return bmp;
     }
 
     @Override
@@ -123,74 +130,74 @@ public class MainActivity extends AppCompatActivity {
             if (data != null) {
                 ArrayList<String> photos = data.getStringArrayListExtra(PhotoPicker.KEY_SELECTED_PHOTOS);
 
-                File imgFile = new File(photos.get(0));
+                final File imgFile = new File(photos.get(0));
                 fileSize.setText(imgFile.length() / 1024 + "k");
                 imageSize.setText(computeSize(imgFile)[0] + "*" + computeSize(imgFile)[1]);
 
                 srcPath = imgFile.getAbsolutePath();
 
-                compress(imgFile.getAbsolutePath());
+                mExecutor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        compress(imgFile.getAbsolutePath());
 
-
-
-//                transformed(imgFile.getAbsolutePath());
-//                scaled(imgFile.getAbsolutePath());
-
-                for (String photo : photos) {
-                    compressWithLs(new File(photo));
-                }
+//                for (String photo : photos) {
+//                    compressWithLs(new File(photo));
+//                }
+                    }
+                });
             }
         }
     }
 
-    private void transformed(final String path){
-        new Thread(new Runnable() {
+    private void transformed(final String path) {
+        mExecutor.execute(new Runnable() {
             @Override
             public void run() {
-                String ss = Environment.getExternalStorageDirectory()+"/222.jpg";
-                ImageApi.transformed(path,ss);
+                final String ss = Environment.getExternalStorageDirectory() + "/222.jpg";
+                ImageUtil.transformed(path, ss);
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        image.setImageBitmap(BitmapFactory.decodeFile(ss));
+                    }
+                });
             }
-        }).start();
+        });
+
     }
 
-    private void scaled(final String path){
-        new Thread(new Runnable() {
+    private void scaled(final String path) {
+        mExecutor.execute(new Runnable() {
             @Override
             public void run() {
-                String ss2 = Environment.getExternalStorageDirectory()+"/333.jpg";
-                ImageApi.scaled(path,ss2,0.5f);
+                String ss2 = Environment.getExternalStorageDirectory() + "/333.jpg";
+                ImageUtil.scaled(path, ss2, 0.5f);
             }
-        }).start();
+        });
     }
 
     /**
-     *
      * @param path
      */
-    private void compress(String path){
-        final String destPath = Environment.getExternalStorageDirectory()+"/111.jpg";
-        ImageApi.compress(path,destPath);
-        File desFile = new File(destPath);
-        image2.setImageBitmap(BitmapFactory.decodeFile(desFile.getAbsolutePath()));
-        thumbFileSize.append(desFile.length() / 1024 + "k");
-        thumbImageSize.append(computeSize(desFile)[0] + "*" + computeSize(desFile)[1]);
-        path2 = desFile.getAbsolutePath();
-
-//        File desFile = new File(Environment.getExternalStorageDirectory(),"111.jpg");
-//        try {
-//            BitmapCompressHelper.doCompress(path,desFile);
-//            image2.setImageBitmap(BitmapFactory.decodeFile(desFile.getAbsolutePath()));
-//            thumbFileSize.append(desFile.length() / 1024 + "k");
-//            thumbImageSize.append(computeSize(desFile)[0] + "*" + computeSize(desFile)[1]);
-//            path2 = desFile.getAbsolutePath();
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
+    private void compress(String path) {
+        final String destPath = Environment.getExternalStorageDirectory() + "/111.jpg";
+        ImageUtil.compress(path, destPath);
+        final File desFile = new File(destPath);
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                image2.setImageBitmap(BitmapFactory.decodeFile(desFile.getAbsolutePath()));
+                thumbFileSize.append(desFile.length() / 1024 + "k");
+                thumbImageSize.append(computeSize(desFile)[0] + "*" + computeSize(desFile)[1]);
+                path2 = desFile.getAbsolutePath();
+            }
+        });
     }
 
     /**
      * Luban
-     *
+     * <p>
      * 压缩单张图片 Listener 方式
      */
     private void compressWithLs(File file) {
@@ -211,8 +218,8 @@ public class MainActivity extends AppCompatActivity {
                         Bitmap b = BitmapFactory.decodeFile(file.getAbsolutePath());
                         image.setImageBitmap(b);
 
-                        thumbFileSize.append("\nLu:"+file.length() / 1024 + "k");
-                        thumbImageSize.append("\nLu:"+computeSize(file)[0] + "*" + computeSize(file)[1]);
+                        thumbFileSize.append("\nLu:" + file.length() / 1024 + "k");
+                        thumbImageSize.append("\nLu:" + computeSize(file)[0] + "*" + computeSize(file)[1]);
                     }
 
                     @Override

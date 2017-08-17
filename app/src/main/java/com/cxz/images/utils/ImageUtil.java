@@ -1,22 +1,17 @@
-package com.cxz.images;
+package com.cxz.images.utils;
 
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.media.ExifInterface;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
-import android.util.Log;
-
-import com.cxz.images.compress2.BitmapCompressHelper;
 
 import java.io.File;
-import java.io.IOException;
 
 /**
  * Created by chenxz on 2017/8/16.
  */
 
-public class ImageApi {
+public class ImageUtil {
 
     /**
      * 旋转
@@ -43,19 +38,19 @@ public class ImageApi {
                     angle = 270;
                     break;
             }
-            // TODO 存在内存溢出问题，待解决
-            Bitmap bitmap = BitmapFactory.decodeFile(srcPath);
-            Bitmap bmp = ImageUtil.rotateBitmap(bitmap, angle);
-            ImageUtil.saveBitmapToFile(bmp, destPath);
+            // 为了防止图片过大获取Bitmap对象导致的OOM
+            Bitmap bitmap = CompressHelper.adjustBitmap(srcPath);
+            // 旋转图片
+            Bitmap bmp = BitmapHelper.rotateBitmap(bitmap, angle);
+            // 将图片保存到目标路径
+            BitmapHelper.saveBitmapToFile(bmp, destPath);
             if (!bitmap.isRecycled()){
-                Log.e("TAg","--------1");
                 bitmap.recycle();
             }
             if (!bmp.isRecycled()){
-                Log.e("TAg","--------2");
                 bmp.recycle();
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -72,7 +67,7 @@ public class ImageApi {
         destPath = setDefined(srcPath, destPath);
         File destFile = new File(destPath);
         try {
-            BitmapCompressHelper.doCompress(srcPath,destFile);
+            CompressHelper.doCompress(srcPath,destFile);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -90,9 +85,14 @@ public class ImageApi {
         if (TextUtils.isEmpty(srcPath))
             return;
         destPath = setDefined(srcPath, destPath);
-        Bitmap bitmap = BitmapFactory.decodeFile(srcPath);
-        Bitmap bmp = ImageUtil.scaleBitmap(bitmap,newWidth,newHeight);
-        ImageUtil.saveBitmapToFile(bmp,destPath);
+        try {
+            // 为了防止图片过大获取Bitmap对象导致的OOM
+            Bitmap bitmap = CompressHelper.adjustBitmap(srcPath);
+            Bitmap bmp = BitmapHelper.scaleBitmap(bitmap, newWidth, newHeight);
+            BitmapHelper.saveBitmapToFile(bmp, destPath);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -106,9 +106,14 @@ public class ImageApi {
         if (TextUtils.isEmpty(srcPath))
             return;
         destPath = setDefined(srcPath, destPath);
-        Bitmap bitmap = BitmapFactory.decodeFile(srcPath);
-        Bitmap bmp = ImageUtil.scaleBitmap(bitmap,ratio);
-        ImageUtil.saveBitmapToFile(bmp,destPath);
+        try {
+            // 为了防止图片过大获取Bitmap对象导致的OOM
+            Bitmap bitmap = CompressHelper.adjustBitmap(srcPath);
+            Bitmap bmp = BitmapHelper.scaleBitmap(bitmap, ratio);
+            BitmapHelper.saveBitmapToFile(bmp, destPath);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Nullable
